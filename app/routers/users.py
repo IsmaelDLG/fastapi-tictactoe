@@ -10,7 +10,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @router.post(
     "/", status_code=status.HTTP_201_CREATED, response_model=schemas.UserResponse
 )
-def create_user(user: schemas.UserCreate, db: Session = Depends(db.get_db)):
+def create(user: schemas.UserCreate, db: Session = Depends(db.get_db)):
     if db.query(models.User).filter(models.User.username == user.username).first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -21,3 +21,10 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(db.get_db)):
     db.commit()
     db.refresh(new_user)
     return new_user
+
+
+@router.get(
+    "/", status_code=status.HTTP_200_OK, response_model=List[schemas.UserResponse]
+)
+def get_all(db: Session = Depends(db.get_db)):
+    return db.query(models.User).all()

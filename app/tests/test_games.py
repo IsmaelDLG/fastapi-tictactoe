@@ -2,6 +2,9 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from ..main import app
 from ..schemas import GameResponse
+from .utils import start_testing_db
+
+start_testing_db()
 
 client = TestClient(app)
 
