@@ -26,13 +26,13 @@ class Game(Base):
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP"),
     )
-    # player1_id = sa.Column(
-    #     sa.Integer, sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    # )
-    # player2_id = sa.Column(
-    #     sa.Integer, sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    # )
+    player1_id = sa.Column(
+        sa.Integer, sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    player2_id = sa.Column(
+        sa.Integer, sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
 
-    # # Relationships
-    # player1 = relationship("User", foreign_keys=[player1_id])
-    # player2 = relationship("User", foreign_keys=[player2_id])
+    # Relationships
+    player1 = relationship("User", foreign_keys=[player1_id])
+    player2 = relationship("User", foreign_keys=[player2_id])

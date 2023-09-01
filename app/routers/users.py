@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import HTTPException, status, Depends, APIRouter
 from sqlalchemy.orm import Session
-from .. import db, schemas, models
+from .. import db, schemas, models, utils
 
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -16,6 +16,7 @@ def create(user: schemas.UserCreate, db: Session = Depends(db.get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"username already exists",
         )
+    user.password = utils.hash(user.password)
     new_user = models.User(**user.model_dump())
     db.add(new_user)
     db.commit()

@@ -11,6 +11,7 @@ router = APIRouter(prefix="/games", tags=["Games"])
     "/", status_code=status.HTTP_201_CREATED, response_model=schemas.GameResponse
 )
 def create(game: schemas.GameCreate, db: Session = Depends(db.get_db)):
+    # TODO: verify both players exist
     new_game = models.Game(**game.model_dump())
     db.add(new_game)
     db.commit()

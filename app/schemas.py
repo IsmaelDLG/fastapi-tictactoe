@@ -2,19 +2,6 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
-class GameBase(BaseModel):
-    pass
-
-
-class GameCreate(GameBase):
-    pass
-
-
-class GameResponse(GameBase):
-    id: int
-    created_at: datetime
-
-
 class UserBase(BaseModel):
     username: str
 
@@ -26,3 +13,19 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: int
     created_at: datetime
+
+
+class GameBase(BaseModel):
+    pass
+
+
+class GameCreate(GameBase):
+    player1_id: int
+    player2_id: int
+
+
+class GameResponse(GameBase):
+    id: int
+    created_at: datetime
+    player1: UserResponse
+    player2: UserResponse
