@@ -12,7 +12,7 @@ client = TestClient(main.app)
 base_url = "/games"
 
 users = []
-
+games = []
 
 @pytest.fixture(autouse=True)
 def set_up_tear_down_test(base_headers):
@@ -31,8 +31,21 @@ def set_up_tear_down_test(base_headers):
         print(f"setup status: {response.status_code} response: {json}")
         users.append(json["id"])
         i += 1
+    while len(games) < 2:
+        response = client.post(
+            "/games",
+            headers=base_headers,
+            json={
+                "player1_id": users[0],
+                "player2_id": users[1],
+            },
+        )
+        json = response.json()
+        print(f"setup status: {response.status_code} response: {json}")
+        games.append(json["id"])
     yield
     # Teardown : fill with any logic you want
+    
 
 
 def test_create_player1_invalid(base_headers):
@@ -90,8 +103,36 @@ def test_create_players_valid(base_headers):
 
 
 def test_get_all():
-    response = client.get("/games")
+    response = client.get(f"{base_url}")
     json = response.json()
     print(f"status: {response.status_code} response: {json}")
     assert response.status_code == status.HTTP_200_OK, "is ok"
     assert type(json) == list, "is list"
+    
+def test_get_one():
+    response = client.get(f"{base_url}/{max(games)}")
+    json = response.json()
+    print(f"status: {response.status_code} response: {json}")
+    assert response.status_code == status.HTTP_200_OK, "is ok"
+    
+    response = client.get(f"{base_url}/{min(games) - 1}")
+    json = response.json()
+    print(f"status: {response.status_code} response: {json}")
+    assert response.status_code == status.HTTP_404_NOT_FOUND, "is ok"
+    
+def test_update(base_headers):
+    # giro de orden
+    response = client.put(f"{base_url}/{max(games)}", headers=base_headers, json={
+        "player1_id": users[1],
+        "player2_id": users[0],
+    })
+    json = response.json()
+    print(f"status: {response.status_code} response: {json}")
+    assert response.status_code == status.HTTP_200_OK, "is ok"
+
+def test_delete(base_headers):
+    # giro de orden
+    response = client.delete(f"{base_url}/{max(games)}", headers=base_headers)
+    print(f"status: {response.status_code}")
+    assert response.status_code == status.HTTP_204_NO_CONTENT, "is deleted"
+    

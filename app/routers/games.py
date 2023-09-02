@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, Response
 from sqlalchemy.orm import Session
 from .. import db, schemas, models
 
@@ -28,3 +28,51 @@ def create(game: schemas.GameCreate, db: Session = Depends(db.get_db)):
 )
 def get_all(db: Session = Depends(db.get_db)):
     return db.query(models.Game).all()
+
+
+@router.get(
+    "/{id}", status_code=status.HTTP_200_OK, response_model=schemas.GameResponse
+)
+def get_one(id:int, db: Session = Depends(db.get_db)):
+    game = db.query(models.Game).filter(models.Game.id == id).first()
+    if game is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"game with id: {id} was not found")
+    
+    return game
+
+@router.put(
+    "/{id}", status_code=status.HTTP_200_OK, response_model=schemas.GameResponse
+)
+def update(updated_game: schemas.GameCreate, id:int, db: Session = Depends(db.get_db)):
+    game_query = db.query(models.Game).filter(models.Game.id == id)
+    current_game = game_query.first() 
+    if current_game is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"game with id: {id} was not found")
+    
+    for player in (updated_game.player1_id, updated_game.player2_id):
+        if db.query(models.User).filter(models.User.id == player).count() != 1:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"player with id: {player} does not exist")
+
+    # update game
+    game_query.update(updated_game.model_dump(),synchronize_session=False)
+    db.commit()
+    db.refresh(current_game)
+    return current_game
+
+@router.delete("/{id}")
+def delete(id: int, db: Session = Depends(db.get_db)):
+    game_query = (
+        db.query(models.Game)
+        .filter(models.Game.id == id)
+    )
+    game = game_query.first()
+    if game is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"game with id: {id} was not found",
+        )
+    
+    game_query.delete(synchronize_session=False)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
