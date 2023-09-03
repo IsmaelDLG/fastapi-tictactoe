@@ -109,14 +109,14 @@ def patch(
         "player2_id": game.player2_id,
     }
 
-    if up_game.player1_won is not None:
+    if up_game.winner_id is not None:
         if up_game.closed_at is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="if winner is defined, closed date must also be defined",
             )
         # both must be set
-        new_game["player1_won"] = up_game.player1_won
+        new_game["winner_id"] = up_game.winner_id
     new_game["closed_at"] = up_game.closed_at
     game_query.update(new_game, synchronize_session=False)
     db.commit()

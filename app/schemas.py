@@ -30,7 +30,7 @@ class GameCreate(GameBase):
 
 class GamePatch(GameBase):
     closed_at: Optional[datetime] = None
-    player1_won: Optional[bool] = None
+    winner_id: Optional[int] = None
 
 
 class GameResponse(GameBase):
@@ -39,7 +39,7 @@ class GameResponse(GameBase):
     player1: UserResponse
     player2: UserResponse
     closed_at: Optional[datetime] = None
-    player1_won: Optional[bool] = None
+    winner_id: Optional[int] = None
 
 
 class MoveBase(BaseModel):

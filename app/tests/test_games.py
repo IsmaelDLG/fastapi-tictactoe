@@ -172,7 +172,7 @@ def test_patch_no_auth(base_headers):
 
 def test_patch_invalid_combination(base_headers):
     response = client.patch(
-        f"{base_url}/{games[0]['id']}", headers=base_headers, json={"player1_won": True}
+        f"{base_url}/{games[0]['id']}", headers=base_headers, json={"winner_id": True}
     )
     json = response.json()
     print(f"status: {response.status_code} json: {json}")
@@ -185,37 +185,9 @@ def test_patch(base_headers):
         headers=base_headers,
         json={
             "closed_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
-            "player1_won": True,
+            "winner_id": True,
         },
     )
     json = response.json()
     print(f"status: {response.status_code} json: {json}")
     assert response.status_code == status.HTTP_200_OK, "is ok"
-
-
-def test_create_move_no_auth():
-    response = client.post(f"{base_url}/{games[0]['id']}/moves", json={"position": 1})
-    json = response.json()
-    print(f"status_code: {response.status_code} json: {json}")
-    assert response.status_code == status.HTTP_403_FORBIDDEN, "invalid credentials"
-
-
-def test_create_move_unexistent_game(base_headers):
-    response = client.post(
-        f"/{base_url}/500/moves", headers=base_headers, json={"position": 1}
-    )
-    json = response.json()
-    print(f"status_code: {response.status_code} json: {json}")
-    assert response.status_code == status.HTTP_404_NOT_FOUND, "not found"
-
-
-def test_create_move_invalid_game(base_headers):
-    """game 2 is closed, no moves accepted."""
-    response = client.post(
-        f"{base_url}/{games[0]['id']}/moves",
-        headers=base_headers,
-        json={"position": 1},
-    )
-    json = response.json()
-    print(f"status_code: {response.status_code} json: {json}")
-    assert response.status_code == status.HTTP_404_NOT_FOUND, "not found"

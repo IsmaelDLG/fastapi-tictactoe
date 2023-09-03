@@ -7,6 +7,7 @@ from typing import List
 from fastapi import APIRouter, Depends, status, HTTPException, Response
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
+from datetime import datetime
 from .. import db, schemas, models, oauth2
 
 
@@ -23,8 +24,73 @@ def is_valid_move(game, current_moves, player_id, position):
     )
 
 
-def find_winner(moves):
-    pass
+def find_winner(board):
+    closed_at = None
+    winner_id = None
+    nones = 0
+    for i in range(len(board)):
+        if board[i] is None:
+            nones += 1
+        (closed_at, winner_id) = find_winner_inner(board, int(i / 3), i % 3)
+        if closed_at is not None:
+            break
+
+    if nones == 0:
+        closed_at = datetime.utcnow()
+
+    return closed_at, winner_id
+
+
+def find_winner_inner(board, x, y, last_pid=None, streak=0, current_dir=None):
+    # condition 1
+    if x < 0 or y < 0 or x > 2 or y > 2:
+        return (None, None)
+    i = x * 3 + y
+    # condition 2
+    if board[i] is None:
+        return (None, None)
+    print(f"x: {x} y: {y} last: {last_pid} id: {board[i]}")
+    if last_pid is not None:
+        if last_pid == board[i]:
+            streak = streak + 1
+            print(f"streak: {streak}")
+            # condition victory
+            if streak == 2:
+                return (datetime.utcnow(), board[i])
+        # condition 3
+        else:
+            # bad path, cut branch
+            return (None, None)
+
+    closed_at = None
+    winner_id = None
+
+    # no direction set, test all
+    if current_dir is None:
+        for x2, y2 in (
+            (0, -1),
+            (1, -1),
+            (1, 0),
+            (1, 1),
+            (0, 1),
+            (-1, 1),
+            (-1, 0),
+            (-1, -1),
+        ):
+            # board is 3x3, these are the surrounding cells
+            (closed_at, winner_id) = find_winner_inner(
+                board, x + x2, y + y2, board[i], streak, (x2, y2)
+            )
+            if closed_at is not None and winner_id is not None:
+                return closed_at, winner_id
+    else:
+        # direction is set, we must go forward
+        return find_winner_inner(
+            board, x + current_dir[0], y + current_dir[1], board[i], streak, current_dir
+        )
+
+    # it's a draw
+    return (None, None)
 
 
 @router.post("/{id}/moves", response_model=schemas.GameAndMoves)
@@ -67,7 +133,10 @@ def create_move(
     db.refresh(new_move)
     current_moves.append(new_move)
 
-    (closed_at, player1_won) = find_winner(current_moves)
+    board = [None for i in range(9)]
+    for move in current_moves:
+        board[move.position] = move.player_id
+    (closed_at, winner_id) = find_winner(board)
 
     if closed_at is not None:
         new_game = {
@@ -76,7 +145,7 @@ def create_move(
             "player1_id": game.player1_id,
             "player2_id": game.player2_id,
             "closed_at": closed_at,
-            "player1_won": player1_won,
+            "winner_id": winner_id,
         }
         game_query.update(new_game, synchronize_session=False)
         db.commit()
