@@ -1,5 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends, status, HTTPException, Response
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from .. import db, schemas, models, oauth2
 
@@ -10,13 +11,15 @@ router = APIRouter(prefix="/games", tags=["Games"])
 @router.post(
     "/", status_code=status.HTTP_201_CREATED, response_model=schemas.GameResponse
 )
-def create(game: schemas.GameCreate, db: Session = Depends(db.get_db), current_user: str = Depends(oauth2.get_current_user)):
-    for player in (game.player1_id, game.player2_id):
+def create(game: schemas.GameCreate, db: Session = Depends(db.get_db), current_user = Depends(oauth2.get_current_user)):
+    """Creates a game with 2 players. Player 1 is set to the authenticated user.
+    """
+    for player in (current_user.id, game.player2_id):
         if db.query(models.User).filter(models.User.id == player).count() != 1:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"player with id: {player} does not exist")
 
     # create game
-    new_game = models.Game(**game.model_dump())
+    new_game = models.Game(player1_id=current_user.id, **game.model_dump())
     db.add(new_game)
     db.commit()
     db.refresh(new_game)
@@ -41,10 +44,12 @@ def get_one(id:int, db: Session = Depends(db.get_db)):
     return game
 
 @router.put(
-    "/{id}", status_code=status.HTTP_200_OK, response_model=schemas.GameResponse
+    "/{id}", status_code=status.HTTP_200_OK, response_model=schemas.GameUpdate
 )
-def update(updated_game: schemas.GameCreate, id:int, db: Session = Depends(db.get_db), current_user: str = Depends(oauth2.get_current_user)):
-    game_query = db.query(models.Game).filter(models.Game.id == id)
+def update(updated_game: schemas.GameUpdate, id:int, db: Session = Depends(db.get_db), current_user: str = Depends(oauth2.get_current_user)):
+    """Updates a game where the current user takes part.
+    """
+    game_query = db.query(models.Game).filter(models.Game.id == id, or_(models.Game.player1_id == current_user.id, models.Game.player2_id == current_user.id))
     current_game = game_query.first() 
     if current_game is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"game with id: {id} was not found")
@@ -63,7 +68,7 @@ def update(updated_game: schemas.GameCreate, id:int, db: Session = Depends(db.ge
 def delete(id: int, db: Session = Depends(db.get_db), current_user: str = Depends(oauth2.get_current_user)):
     game_query = (
         db.query(models.Game)
-        .filter(models.Game.id == id)
+        .filter(models.Game.id == id, or_(models.Game.player1_id == current_user.id, models.Game.player2_id == current_user.id))
     )
     game = game_query.first()
     if game is None:

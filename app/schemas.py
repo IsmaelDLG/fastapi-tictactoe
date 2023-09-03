@@ -20,9 +20,11 @@ class GameBase(BaseModel):
 
 
 class GameCreate(GameBase):
-    player1_id: int
     player2_id: int
-
+    
+class GameUpdate(GameCreate):
+    player1_id: int
+    
 
 class GameResponse(GameBase):
     id: int

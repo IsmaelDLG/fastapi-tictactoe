@@ -135,7 +135,7 @@ def test_get_all():
     assert type(json) == list, "is list"
     
 def test_get_one():
-    response = client.get(f"{base_url}/{games[len(games)-1]['id']}")
+    response = client.get(f"{base_url}/{games[-1]['id']}")
     json = response.json()
     print(f"status: {response.status_code} response: {json}")
     assert response.status_code == status.HTTP_200_OK, "is ok"
@@ -148,7 +148,7 @@ def test_get_one():
 def test_update(base_headers):
     base_headers.update(auth)
     # giro de orden
-    response = client.put(f"{base_url}/{games[len(games)-1]['id']}", headers=base_headers, json={
+    response = client.put(f"{base_url}/{games[-1]['id']}", headers=base_headers, json={
         "player1_id": users[1]["id"],
         "player2_id": users[0]["id"],
     })
@@ -159,7 +159,7 @@ def test_update(base_headers):
 def test_delete(base_headers):
     base_headers.update(auth)
     # giro de orden
-    response = client.delete(f"{base_url}/{games[len(games)-1]['id']}", headers=base_headers)
+    response = client.delete(f"{base_url}/{games[-1]['id']}", headers=base_headers)
     print(f"status: {response.status_code}")
     assert response.status_code == status.HTTP_204_NO_CONTENT, "is deleted"
     
