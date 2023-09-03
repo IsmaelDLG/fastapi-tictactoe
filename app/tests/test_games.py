@@ -34,12 +34,12 @@ def set_up_users(headers):
         i += 1
 
 
-def set_up_auth():
+def set_up_auth(headers):
     while len(auth) < 1:
         response = client.post(
             "/login",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data={
+            headers=headers,
+            json={
                 "username": users[0]["username"],
                 "password": users[0]["username"],
             },
@@ -78,25 +78,11 @@ def set_up_games(headers):
 @pytest.fixture(autouse=True)
 def set_up_and_tear_down(base_headers):
     set_up_users(base_headers)
-    set_up_auth()
+    set_up_auth(base_headers)
     base_headers.update(auth)
     set_up_games(base_headers)
     yield
     # Teardown here
-
-
-def test_create_player1_invalid(base_headers):
-    # 2 users in setup
-    (player1, player2) = users
-    # test game create error when any users does not exist
-    response = client.post(
-        f"{base_url}",
-        headers=base_headers,
-        json={"player1_id": player1["id"], "player2_id": player2["id"] + 1},
-    )
-    json = response.json()
-    print(f"status: {response.status_code} response: {json}")
-    assert response.status_code == status.HTTP_400_BAD_REQUEST, "player2 doesn't exist"
 
 
 def test_create_player2_invalid(base_headers):
@@ -105,19 +91,23 @@ def test_create_player2_invalid(base_headers):
     response = client.post(
         f"{base_url}",
         headers=base_headers,
-        json={"player1_id": player1["id"], "player2_id": player2["id"] + 1},
+        json={"player2_id": 500},
     )
     json = response.json()
     print(f"status: {response.status_code} response: {json}")
     assert response.status_code == status.HTTP_400_BAD_REQUEST, "player1 doesn't exist"
+
+
+def test_create_player_equal(base_headers):
+    (player1, player2) = users
     response = client.post(
         f"{base_url}",
         headers=base_headers,
-        json={"player1_id": player2["id"] + 1, "player2_id": player2["id"] + 1},
+        json={"player2_id": player1["id"]},
     )
     json = response.json()
     print(f"status: {response.status_code} response: {json}")
-    assert response.status_code == status.HTTP_400_BAD_REQUEST, "player1/2 don't exist"
+    assert response.status_code == status.HTTP_400_BAD_REQUEST, "players equal"
 
 
 def test_create_players_valid(base_headers):
@@ -128,7 +118,6 @@ def test_create_players_valid(base_headers):
         f"{base_url}",
         headers=base_headers,
         json={
-            "player1_id": player1["id"],
             "player2_id": player2["id"],
         },
     )

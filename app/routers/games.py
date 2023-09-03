@@ -17,6 +17,12 @@ def create(
     current_user=Depends(oauth2.get_current_user),
 ):
     """Creates a game with 2 players. Player 1 is set to the authenticated user."""
+    if current_user.id == game.player2_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"players must be diffent",
+        )
+
     for player in (current_user.id, game.player2_id):
         if db.query(models.User).filter(models.User.id == player).count() != 1:
             raise HTTPException(
@@ -141,28 +147,3 @@ def delete(
     game_query.delete(synchronize_session=False)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@router.post("/{id}/moves", response_model=schemas.GameResponse)
-def create_move(
-    id: int,
-    db: Session = Depends(db.get_db),
-    current_user: str = Depends(oauth2.get_current_user),
-):
-    game_query = db.query(models.Game).filter(
-        models.Game.id == id,
-        or_(
-            models.Game.player1_id == current_user.id,
-            models.Game.player2_id == current_user.id,
-        ),
-        models.Game.closed_at == None,
-    )
-
-    game = game_query.first()
-    if game is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"game with id: {id} was not found",
-        )
-
-    return game
