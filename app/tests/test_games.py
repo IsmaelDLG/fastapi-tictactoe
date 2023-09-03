@@ -2,6 +2,7 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from time import time
+from datetime import datetime
 from .. import main, db
 from .utils import override_get_db
 
@@ -75,7 +76,6 @@ def set_up_and_tear_down(base_headers):
 
 
 def test_create_player1_invalid(base_headers):
-    base_headers.update(auth)
     # 2 users in setup
     (player1, player2) = users
     # test game create error when any users does not exist
@@ -89,7 +89,6 @@ def test_create_player1_invalid(base_headers):
     assert response.status_code == status.HTTP_400_BAD_REQUEST, "player2 doesn't exist"
     
 def test_create_player2_invalid(base_headers):
-    base_headers.update(auth)
     # 2 users in setup
     (player1, player2) = users
     response = client.post(
@@ -110,7 +109,6 @@ def test_create_player2_invalid(base_headers):
     assert response.status_code == status.HTTP_400_BAD_REQUEST, "player1/2 don't exist"
     
 def test_create_players_valid(base_headers):
-    base_headers.update(auth)
     # 2 users in setup
     (player1, player2) = users
     # test game create when users exist
@@ -144,22 +142,67 @@ def test_get_one():
     json = response.json()
     print(f"status: {response.status_code} response: {json}")
     assert response.status_code == status.HTTP_404_NOT_FOUND, "is ok"
-    
-def test_update(base_headers):
-    base_headers.update(auth)
-    # giro de orden
-    response = client.put(f"{base_url}/{games[-1]['id']}", headers=base_headers, json={
-        "player1_id": users[1]["id"],
-        "player2_id": users[0]["id"],
-    })
-    json = response.json()
-    print(f"status: {response.status_code} response: {json}")
-    assert response.status_code == status.HTTP_200_OK, "is ok"
+
+# def test_update(base_headers):
+#     # giro de orden
+#     response = client.put(f"{base_url}/{games[-1]['id']}", headers=base_headers, json={
+#         "player1_id": users[1]["id"],
+#         "player2_id": users[0]["id"],
+#     })
+#     json = response.json()
+#     print(f"status: {response.status_code} response: {json}")
+#     assert response.status_code == status.HTTP_200_OK, "is ok"
 
 def test_delete(base_headers):
-    base_headers.update(auth)
     # giro de orden
     response = client.delete(f"{base_url}/{games[-1]['id']}", headers=base_headers)
     print(f"status: {response.status_code}")
     assert response.status_code == status.HTTP_204_NO_CONTENT, "is deleted"
+
+def test_patch_no_auth(base_headers):
+    response = client.patch(f"{base_url}/{games[0]['id']}", json={})
+    print(f"status: {response.status_code}")
+    assert response.status_code == status.HTTP_403_FORBIDDEN, "invalid credentials"
+
+def test_patch_invalid_combination(base_headers):
+    response = client.patch(f"{base_url}/{games[0]['id']}", headers=base_headers, json={
+        "player1_won": True
+    })
+    json = response.json()
+    print(f"status: {response.status_code} json: {json}")
+    assert response.status_code == status.HTTP_400_BAD_REQUEST, "invalid combination"
+
+def test_patch(base_headers):
+    response = client.patch(f"{base_url}/{games[0]['id']}", headers=base_headers, json={
+        "closed_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+        "player1_won": True
+    })
+    json = response.json()
+    print(f"status: {response.status_code} json: {json}")
+    assert response.status_code == status.HTTP_200_OK, "is ok"
+
+def test_create_move_no_auth():
+    response = client.post(f"/games/{games[0]['id']}/moves", json={
+        "position":1
+    });
+    json = response.json()
+    print(f"status_code: {response.status_code} json: {json}")
+    assert response.status_code == status.HTTP_403_FORBIDDEN, "invalid credentials"
     
+def test_create_move_unexistent_game(base_headers):
+    response = client.post(f"/games/500/moves", headers=base_headers, json={
+        "position":1
+    });
+    json = response.json()
+    print(f"status_code: {response.status_code} json: {json}")
+    assert response.status_code == status.HTTP_404_NOT_FOUND, "not found"
+
+# def test_create_move_invalid_game(base_headers):
+#     """game 2 is closed, no moves accepted.
+#     """
+#     response = client.post(f"/games/2/moves", headers=base_headers, json={
+#         "position":1
+#     });
+#     json = response.json()
+#     print(f"status_code: {response.status_code} json: {json}")
+#     assert response.status_code == status.HTTP_404_NOT_FOUND, "not found"

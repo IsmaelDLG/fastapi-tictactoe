@@ -32,7 +32,11 @@ class Game(Base):
     player2_id = sa.Column(
         sa.Integer, sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-
+    closed_at = sa.Column(
+        sa.TIMESTAMP(timezone=True)
+    )
+    player1_won = sa.Column(sa.Boolean)
+    
     # Relationships
     player1 = relationship("User", foreign_keys=[player1_id])
     player2 = relationship("User", foreign_keys=[player2_id])
