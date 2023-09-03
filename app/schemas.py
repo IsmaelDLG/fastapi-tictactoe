@@ -29,3 +29,11 @@ class GameResponse(GameBase):
     created_at: datetime
     player1: UserResponse
     player2: UserResponse
+    
+
+class TokenData(BaseModel):
+    user_id:int
+    
+class TokenResponse(BaseModel):
+    token:str
+    type:str

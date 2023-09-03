@@ -13,6 +13,7 @@ base_url = "/games"
 
 users = []
 games = []
+auth = {}
 
 @pytest.fixture(autouse=True)
 def set_up_tear_down_test(base_headers):
@@ -31,6 +32,19 @@ def set_up_tear_down_test(base_headers):
         print(f"setup status: {response.status_code} response: {json}")
         users.append(json["id"])
         i += 1
+    while len(auth) < 1:
+        response = client.post(
+            "/login",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={
+                "username": "user1",
+                "password": "user1",
+            },
+        )
+        json = response.json()
+        print(f"setup status: {response.status_code} response: {json}")
+        auth.update({"Authorization": f"{json['type']} {json['token']}"})
+    base_headers.update(auth)
     while len(games) < 2:
         response = client.post(
             "/games",
@@ -49,6 +63,7 @@ def set_up_tear_down_test(base_headers):
 
 
 def test_create_player1_invalid(base_headers):
+    base_headers.update(auth)
     # 2 users in setup
     (player1, player2) = users
     player3 = max(users) + 1
@@ -64,6 +79,7 @@ def test_create_player1_invalid(base_headers):
     assert response.status_code == status.HTTP_400_BAD_REQUEST, "player2 doesn't exist"
     
 def test_create_player2_invalid(base_headers):
+    base_headers.update(auth)
     # 2 users in setup
     (player1, player2) = users
     player3 = max(users) + 1
@@ -85,6 +101,7 @@ def test_create_player2_invalid(base_headers):
     assert response.status_code == status.HTTP_400_BAD_REQUEST, "player1/2 don't exist"
     
 def test_create_players_valid(base_headers):
+    base_headers.update(auth)
     # 2 users in setup
     (player1, player2) = users
     player3 = max(users) + 1
@@ -121,6 +138,7 @@ def test_get_one():
     assert response.status_code == status.HTTP_404_NOT_FOUND, "is ok"
     
 def test_update(base_headers):
+    base_headers.update(auth)
     # giro de orden
     response = client.put(f"{base_url}/{max(games)}", headers=base_headers, json={
         "player1_id": users[1],
@@ -131,6 +149,7 @@ def test_update(base_headers):
     assert response.status_code == status.HTTP_200_OK, "is ok"
 
 def test_delete(base_headers):
+    base_headers.update(auth)
     # giro de orden
     response = client.delete(f"{base_url}/{max(games)}", headers=base_headers)
     print(f"status: {response.status_code}")

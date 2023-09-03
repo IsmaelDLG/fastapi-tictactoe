@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Depends, status, HTTPException, Response
 from sqlalchemy.orm import Session
-from .. import db, schemas, models
+from .. import db, schemas, models, oauth2
 
 
 router = APIRouter(prefix="/games", tags=["Games"])
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/games", tags=["Games"])
 @router.post(
     "/", status_code=status.HTTP_201_CREATED, response_model=schemas.GameResponse
 )
-def create(game: schemas.GameCreate, db: Session = Depends(db.get_db)):
+def create(game: schemas.GameCreate, db: Session = Depends(db.get_db), current_user: str = Depends(oauth2.get_current_user)):
     for player in (game.player1_id, game.player2_id):
         if db.query(models.User).filter(models.User.id == player).count() != 1:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"player with id: {player} does not exist")
@@ -43,7 +43,7 @@ def get_one(id:int, db: Session = Depends(db.get_db)):
 @router.put(
     "/{id}", status_code=status.HTTP_200_OK, response_model=schemas.GameResponse
 )
-def update(updated_game: schemas.GameCreate, id:int, db: Session = Depends(db.get_db)):
+def update(updated_game: schemas.GameCreate, id:int, db: Session = Depends(db.get_db), current_user: str = Depends(oauth2.get_current_user)):
     game_query = db.query(models.Game).filter(models.Game.id == id)
     current_game = game_query.first() 
     if current_game is None:
@@ -60,7 +60,7 @@ def update(updated_game: schemas.GameCreate, id:int, db: Session = Depends(db.ge
     return current_game
 
 @router.delete("/{id}")
-def delete(id: int, db: Session = Depends(db.get_db)):
+def delete(id: int, db: Session = Depends(db.get_db), current_user: str = Depends(oauth2.get_current_user)):
     game_query = (
         db.query(models.Game)
         .filter(models.Game.id == id)
