@@ -18,20 +18,18 @@ auth = {}
 
 
 def set_up_users(headers):
-    i = 1
     while len(users) < 2:
         response = client.post(
             "/users",
             headers=headers,
             json={
-                "username": f"user{i}",
-                "password": f"user{i}",
+                "username": f"user{time()}",
+                "password": f"user{time()}",
             },
         )
         json = response.json()
         print(f"setup status: {response.status_code} response: {json}")
         users.append(json)
-        i += 1
 
 
 def set_up_auth(headers):
@@ -62,7 +60,7 @@ def set_up_games(headers):
         )
         json = response.json()
         print(f"setup status: {response.status_code} response: {json}")
-        games.append(json)
+        games.append(json["game"])
     # close game 1
     if games[0]["closed_at"] is None:
         response = client.patch(
@@ -72,7 +70,7 @@ def set_up_games(headers):
         )
         json = response.json()
         print(f"setup status: {response.status_code} response: {json}")
-        games[0] = json
+        games[0] = json["game"]
 
 
 @pytest.fixture(autouse=True)
@@ -124,6 +122,8 @@ def test_create_players_valid(base_headers):
     json = response.json()
     print(f"status: {response.status_code} response: {json}")
     assert response.status_code == status.HTTP_201_CREATED, "is created"
+    assert json.get("game") is not None, "game data"
+    assert json.get("moves") is not None, "move data"
 
 
 def test_get_all():

@@ -18,7 +18,7 @@ router = APIRouter(prefix="/games", tags=["Games"])
 
 def is_valid_move(game, current_moves, player_id, position):
     logger.info(
-        f"closed_at: {game.closed_at} n_moves: {len(current_moves)} last_playerid: {current_moves[-1].player_id} playerid: {player_id} position: {position}"
+        f"closed_at: {game.closed_at} n_moves: {len(current_moves)} last_playerid: {current_moves[-1].player_id if len(current_moves) else game.player2_id} playerid: {player_id} position: {position}"
     )
     return (
         game.closed_at is None
@@ -105,14 +105,20 @@ def create_move(
             models.Game.player1_id == current_user.id,
             models.Game.player2_id == current_user.id,
         ),
-        models.Game.closed_at == None,
     )
     game = game_query.first()
     if game is None:
-        logger.info("id: {id} not found error")
+        logger.info(f"id: {id} not found error")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"game with id: {id} was not found",
+        )
+
+    if game.closed_at is not None:
+        logger.info(f"id: {id} game is closed!")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"game with id: {id} is closed",
         )
 
     current_moves = (

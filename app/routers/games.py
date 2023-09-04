@@ -11,7 +11,7 @@ router = APIRouter(prefix="/games", tags=["Games"])
 
 
 @router.post(
-    "/", status_code=status.HTTP_201_CREATED, response_model=schemas.GameResponse
+    "/", status_code=status.HTTP_201_CREATED, response_model=schemas.GameAndMoves
 )
 def create(
     game: schemas.GameCreate,
@@ -43,21 +43,24 @@ def create(
     db.commit()
     db.refresh(new_game)
     logger.debug("ok")
-    return new_game
+    # no hace falta hacer una query que no devolverá resultados
+    return {"game": new_game, "moves": []}
 
 
 @router.get(
     "/", status_code=status.HTTP_200_OK, response_model=List[schemas.GameResponse]
 )
 def get_all(db: Session = Depends(db.get_db), limit: int = 3):
+    """Does not return game details"""
     logger.debug(f"id: {id} limit: {limit}")
     return db.query(models.Game).limit(limit).all()
 
 
 @router.get(
-    "/{id}", status_code=status.HTTP_200_OK, response_model=schemas.GameResponse
+    "/{id}", status_code=status.HTTP_200_OK, response_model=schemas.GameAndMoves
 )
 def get_one(id: int, db: Session = Depends(db.get_db)):
+    """Returns game details, like moves"""
     logger.debug(f"id: {id}")
     game = db.query(models.Game).filter(models.Game.id == id).first()
     if game is None:
@@ -67,10 +70,17 @@ def get_one(id: int, db: Session = Depends(db.get_db)):
             detail=f"game with id: {id} was not found",
         )
 
-    return game
+    current_moves = (
+        db.query(models.Move)
+        .filter(models.Move.game_id == game.id)
+        .order_by(models.Move.id)
+        .all()
+    )
+
+    return {"game": game, "moves": current_moves}
 
 
-@router.patch("/{id}")
+@router.patch("/{id}", response_model=schemas.GameAndMoves)
 def patch(
     id: int,
     up_game: schemas.GamePatch,
@@ -115,8 +125,15 @@ def patch(
     game_query.update(new_game, synchronize_session=False)
     db.commit()
     db.refresh(game)
+
+    current_moves = (
+        db.query(models.Move)
+        .filter(models.Move.game_id == game.id)
+        .order_by(models.Move.id)
+        .all()
+    )
     logger.debug("ok")
-    return game
+    return {"game": game, "moves": current_moves}
 
 
 @router.delete("/{id}")
