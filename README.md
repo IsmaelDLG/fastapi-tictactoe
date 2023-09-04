@@ -2,34 +2,26 @@
 
 API Rest para jugar al tres en raya.
 
-Para ejecutar el servidor hace falta instalar las dependencias (requirements.txt) y declarar las variables de entorno necesarias.
-
-## Variables de entorno
-
- - DB_PATH: path en el que se guardará la BBDD sqlite3
- - JWT_EXPIRE_MINUTES: tiempo de expiración de los JWT
- - JWT_SECRET: secret para encriptar los tokens
- - JWT_ALGO: algoritmo de encriptación. Ver https://pyjwt.readthedocs.io/en/stable/algorithms.html
-
-
-Ejemplo:
-```bash
-DB_PATH=./sqlite3.db
-jwt_expire_minutes=60
-jwt_secret=Secret12345
-jwt_algo=HS256
-```
+Para ejecutar el servidor hace falta instalar las dependencias (requirements.txt), declarar las variables de entorno necesarias y inicializar la BBDD. Para más info, ver el apartado de [Instalación](#instalación).
 
 ## Instalación
 
-1. Instalar dependencias
-2. Inicializar BBDD
-3. Arrancar servidor
+1. Definir variables de entorno
+2. Instalar dependencias
+3. Inicializar BBDD
+4. Arrancar servidor
 
 Ejemplo en windows:
 
 ```cmd
 cd <root-del-repositorio>
+:: Definir variables de entorno
+(
+echo DB_PATH=./sqlite3.db
+echo JWT_EXPIRE_MINUTES=60
+echo JWT_SECRET=Secret12345
+echo JWT_ALGO=HS256
+)>".env"
 :: Crear entorno virtual
 py -3 -m virtualenv venv 
 :: Activarlo  
@@ -41,6 +33,13 @@ alembic upgrade head
 :: Iniciar servidor
 uvicorn app.main:app
 ```
+
+### Variables de entorno
+
+ - DB_PATH: path en el que se guardará la BBDD sqlite3
+ - JWT_EXPIRE_MINUTES: tiempo de expiración de los JWT
+ - JWT_SECRET: secret para encriptar los tokens
+ - JWT_ALGO: algoritmo de encriptación. Ver https://pyjwt.readthedocs.io/en/stable/algorithms.html
 
 ## Tests
 
