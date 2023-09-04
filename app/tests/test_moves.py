@@ -127,6 +127,9 @@ def test_find_winner():
     (closed_at, winner_id) = find_winner([1, 1, 1, 0, 0, None, None, None, None])
     assert closed_at is not None, "game finished"
     assert winner_id == 1, "1 win"
-    (closed_at, winner_id) = find_winner([0, 0, 0, 1, 1, None, None, None, None])
+    (closed_at, winner_id) = find_winner([1, 0, 0, 1, 0, 1, 1, None, None])
+    assert closed_at is not None, "game finished"
+    assert winner_id == 1, "1 win"
+    (closed_at, winner_id) = find_winner([0, 1, 1, 0, 0, 1, 1, 1, 0])
     assert closed_at is not None, "game finished"
     assert winner_id == 0, "0 win"

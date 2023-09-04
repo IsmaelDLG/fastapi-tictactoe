@@ -2,7 +2,9 @@ from typing import List
 from fastapi import APIRouter, Depends, status, HTTPException, Response
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
-from .. import db, schemas, models, oauth2
+from .. import db, schemas, models, oauth2, logs
+
+logger = logs.get_logger(__name__)
 
 
 router = APIRouter(prefix="/games", tags=["Games"])
@@ -17,7 +19,11 @@ def create(
     current_user=Depends(oauth2.get_current_user),
 ):
     """Creates a game with 2 players. Player 1 is set to the authenticated user."""
+    logger.debug(f"id: {id} json: {game.model_dump()}")
     if current_user.id == game.player2_id:
+        logger.info(
+            f"player1_id: {current_user.id} player2_id: {game.player2_id} equal error"
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"players must be diffent",
@@ -25,6 +31,7 @@ def create(
 
     for player in (current_user.id, game.player2_id):
         if db.query(models.User).filter(models.User.id == player).count() != 1:
+            logger.info(f"player: {player} not found error")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"player with id: {player} does not exist",
@@ -35,50 +42,32 @@ def create(
     db.add(new_game)
     db.commit()
     db.refresh(new_game)
+    logger.debug("ok")
     return new_game
 
 
 @router.get(
     "/", status_code=status.HTTP_200_OK, response_model=List[schemas.GameResponse]
 )
-def get_all(db: Session = Depends(db.get_db)):
-    return db.query(models.Game).all()
+def get_all(db: Session = Depends(db.get_db), limit: int = 3):
+    logger.debug(f"id: {id} limit: {limit}")
+    return db.query(models.Game).limit(limit).all()
 
 
 @router.get(
     "/{id}", status_code=status.HTTP_200_OK, response_model=schemas.GameResponse
 )
 def get_one(id: int, db: Session = Depends(db.get_db)):
+    logger.debug(f"id: {id}")
     game = db.query(models.Game).filter(models.Game.id == id).first()
     if game is None:
+        logger.info("id: {id} not found error")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"game with id: {id} was not found",
         )
 
     return game
-
-
-# @router.put(
-#     "/{id}", status_code=status.HTTP_200_OK, response_model=schemas.GameResponse
-# )
-# def update(updated_game: schemas.GameUpdate, id:int, db: Session = Depends(db.get_db), current_user: str = Depends(oauth2.get_current_user)):
-#     """Updates a game where the current user takes part.
-#     """
-#     game_query = db.query(models.Game).filter(models.Game.id == id, or_(models.Game.player1_id == current_user.id, models.Game.player2_id == current_user.id))
-#     current_game = game_query.first()
-#     if current_game is None:
-#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"game with id: {id} was not found")
-
-#     for player in (updated_game.player1_id, updated_game.player2_id):
-#         if db.query(models.User).filter(models.User.id == player).count() != 1:
-#             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"player with id: {player} does not exist")
-
-#     # update game
-#     game_query.update(updated_game.model_dump(),synchronize_session=False)
-#     db.commit()
-#     db.refresh(current_game)
-#     return current_game
 
 
 @router.patch("/{id}")
@@ -88,6 +77,7 @@ def patch(
     db: Session = Depends(db.get_db),
     current_user: str = Depends(oauth2.get_current_user),
 ):
+    logger.debug(f"id: {id} json: {up_game.model_dump()}")
     game_query = db.query(models.Game).filter(
         models.Game.id == id,
         or_(
@@ -97,6 +87,7 @@ def patch(
     )
     game = game_query.first()
     if game is None:
+        logger.info(f"game_id: {id} not found error")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"game with id: {id} was not found",
@@ -111,6 +102,9 @@ def patch(
 
     if up_game.winner_id is not None:
         if up_game.closed_at is None:
+            logger.info(
+                f"game_id: {id} winner_id: {up_game.winner_id} closed_at: {up_game.closed_at} can not set winner in open game"
+            )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="if winner is defined, closed date must also be defined",
@@ -121,6 +115,7 @@ def patch(
     game_query.update(new_game, synchronize_session=False)
     db.commit()
     db.refresh(game)
+    logger.debug("ok")
     return game
 
 
@@ -130,6 +125,7 @@ def delete(
     db: Session = Depends(db.get_db),
     current_user: str = Depends(oauth2.get_current_user),
 ):
+    logger.debug(f"id: {id}")
     game_query = db.query(models.Game).filter(
         models.Game.id == id,
         or_(
@@ -139,6 +135,7 @@ def delete(
     )
     game = game_query.first()
     if game is None:
+        logger.info("id: {id} not found error")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"game with id: {id} was not found",
